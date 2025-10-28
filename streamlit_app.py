@@ -20,7 +20,7 @@ st.title("🧾 AI Invoice Processing System")
 st.markdown('<span style="color:#ef4444; font-weight:bold; font-size:18px;">Black & Red Theme | Streamlit</span>', unsafe_allow_html=True)
 st.write("Upload an invoice PDF to extract key fields using the AI backend.")
 
-backend_url = "http://localhost:8000/process-pdf-upload-redis"
+backend_url = "http://localhost:8080/process-pdf-upload-redis"
 
 uploaded_file = st.file_uploader("Drop PDF here or click to browse", type="pdf", label_visibility="visible")
 
@@ -63,7 +63,7 @@ if uploaded_file:
                 except Exception as e:
                     st.error(f"Error during request: {e}")
 
-        st.button("Reset", on_click=lambda: st.experimental_rerun())
+        st.button("Reset", on_click=lambda: st.rerun())
 
 st.markdown("---")
 st.caption("Powered by FastAPI & Streamlit | Black & Red Theme | v1.0")

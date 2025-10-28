@@ -1,4 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 from mistralai import Mistral
 from groq import Groq
 import boto3
@@ -47,6 +50,7 @@ from excel_generator import excel_template_downlaoder, process_json_to_excel, up
 # from rapid_ocr import run_rapidocr #, pdf_utils, ocr_rapid, layout
 from src import run_rapid4
 # from RAPID_OCR_FINAL import run_rapid4
+from redis_rag_setup import rag_invoice_prompt_redis
 
 # Load environment variables (.env file contains AWS credentials and API Keys)
 load_dotenv()
@@ -62,6 +66,18 @@ bucket_name_1=os.getenv("BUCKET_NAME")
 
 # Initialize FastAPI app
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="."), name="static")
 
 # Initialize S3 client
 s3_client = boto3.client(
@@ -329,6 +345,19 @@ class MPCIExcel(BaseModel):
 # These endpoints are defined to handle various PDF processing tasks.
 #-----------------------------------------------------------------------
 
+# Serve main HTML page
+@app.get("/")
+async def read_root():
+    return FileResponse("index.html")
+
+@app.get("/app.js")
+async def serve_app_js():
+    return FileResponse("app.js", media_type="application/javascript")
+
+@app.get("/style.css")
+async def serve_style_css():
+    return FileResponse("style.css", media_type="text/css")
+
 # This endpoint (/process-pdf) processes a PDF file, extracts its content, and returns the result in JSON format.
 @app.post("/process-pdf")
 async def process_pdf_endpoint(data: PDFRequest):
@@ -388,6 +417,68 @@ async def process_pdf_upload(file: UploadFile):
 
         # Process using Invoice RAG flow (same as /invoice-rag for invoices)
         result = extract(get_rag_prompt(file_name, "INV"))
+
+        if os.path.exists(file_name):
+            os.remove(file_name)
+
+        result_json = sanitize_json(result)
+
+        if isinstance(result_json, dict):
+            add_doc_type(result_json, "INV")
+            return result_json
+        elif isinstance(result_json, list):
+            for item in result_json:
+                if isinstance(item, dict):
+                    add_doc_type(result_json, "INV")
+                else:
+                    raise ValueError("List item is not a dictionary")
+            return result_json
+        else:
+            raise ValueError("JSON is neither dict nor list")
+
+    except Exception as e:
+        try:
+            if os.path.exists("parsing_invoice.pdf"):
+                os.remove("parsing_invoice.pdf")
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/process-pdf-upload-redis")
+async def process_pdf_upload_redis(file: UploadFile):
+    try:
+        if not file:
+            raise HTTPException(status_code=400, detail="No file uploaded")
+        if file.content_type not in ("application/pdf", "application/octet-stream"):
+            raise HTTPException(status_code=400, detail="Please upload a PDF file")
+
+        file_name = "parsing_invoice.pdf"
+        contents = await file.read()
+        with open(file_name, "wb") as f:
+            f.write(contents)
+
+        # Build a RAG prompt using Redis vector search and extracted text
+        try:
+            text = plumber_extract(file_name)
+            logging.info(f"Extracted text from PDF (length: {len(text)} chars)")
+        except Exception as e:
+            text = ""
+            logging.warning(f"Failed to extract text with plumber: {e}")
+        
+        tes = tessaract_ocr(file_name)
+        logging.info(f"Extracted text with Tesseract (length: {len(tes)} chars)")
+
+        ocr_text = text if text else tes
+        logging.info(f"Using OCR text with length: {len(ocr_text)}")
+        
+        if not ocr_text:
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+        
+        prompt = rag_invoice_prompt_redis(ocr_text)
+        logging.info(f"Generated RAG prompt (length: {len(prompt)} chars)")
+        
+        result = extract(prompt)
+        logging.info("Successfully extracted result from LLM")
 
         if os.path.exists(file_name):
             os.remove(file_name)
@@ -610,7 +701,7 @@ async def pop_endpoint(data: PDFRequest):
         else:
             raise HTTPException(status_code=400, detail="Invalid file path provided")
         
-        result=extract(get_pop_prompt(file_name))
+        result=extract(get_prompt(file_name, "POP"))
         if os.path.exists(file_name):
             os.remove(file_name)
 

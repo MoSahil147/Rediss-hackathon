@@ -12,6 +12,8 @@ cffi==2.0.0
 charset-normalizer==3.4.3
 cohere==5.18.0
 chromadb==1.0.20
+redis>=5.0.0
+scipy>=1.9.0
 click==8.2.1
 coloredlogs==15.0.1
 cryptography==45.0.7

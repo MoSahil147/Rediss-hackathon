@@ -33,5 +33,6 @@ dependencies = [
     "requests>=2.32.0",
     "sentence-transformers>=5.1.0",
     "sshtunnel>=0.4.0",
+    "streamlit>=1.50.0",
     "uvicorn>=0.35.0",
 ]

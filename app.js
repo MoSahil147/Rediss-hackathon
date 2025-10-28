@@ -1,5 +1,5 @@
 // Configuration
-const API_ENDPOINT = '/process-pdf-upload';
+const API_ENDPOINT = '/process-pdf-upload-redis';
 const REQUEST_TIMEOUT = 60000; // 60 seconds
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
