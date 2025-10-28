@@ -1,8 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, UploadFile
-# from flask import Flask, request, jsonify
 from mistralai import Mistral
 from groq import Groq
-import openai
 import boto3
 # import asyncpg, asyncio
 # from sshtunnel import SSHTunnelForwarder
@@ -20,21 +18,8 @@ import re
 import requests
 from pathlib import Path
 import base64, hashlib
-import google.generativeai as genai
-import cohere
 import time
 import pandas as pd
-try:
-    from cohere_utils import cohere_generate_text, extract_text_from_pdf
-except Exception:
-    cohere_generate_text = None
-    # Fallback: reuse existing plumber_extract to get text from PDF
-    def extract_text_from_pdf(file_path: str) -> str:
-        try:
-            return plumber_extract(file_path)
-        except Exception:
-            return ""
-
 
 # from pprint import pprint
 
