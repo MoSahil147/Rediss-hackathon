@@ -51,24 +51,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# # PostgreSQL Connection Pool, Tunnel Forwarder & DB Configuration
-# db_pool: asyncpg.pool.Pool = None
-# tunnel: SSHTunnelForwarder = None
-
-# # SSH config
-# SSH_HOST = "43.205.167.74"
-# SSH_PORT = 22
-# SSH_USER = "ec2-user"
-# SSH_PEM_FILE = r"/home/prathamesh/Downloads/odex-rds-2-0.pem"
-
-# # DB config (private inside AWS VPC)
-# DB_HOST = "odexdbinstance.c7vjncpo5lsx.ap-south-1.rds.amazonaws.com"
-# DB_PORT = 5432
-# DB_NAME = "odextest"
-# DB_USER = "postgres"
-# DB_PASS = "your_db_password"
-
-
 # file imports
 import json_mapper
 from prompts import get_invoice_prompt, do_prompt, pop_prompt,rag_invoice_prompt,rag_do_prompt, bl_prompt, bl_splitting_prompt, groq_bl_splitting_prompt, bl_prompt_groq
@@ -90,8 +72,6 @@ aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 region_name = os.getenv("REGION_NAME")
 api_key = os.getenv("API_KEY")
 bucket_name_1=os.getenv("BUCKET_NAME")
-
-GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")
 
 
 
@@ -185,68 +165,6 @@ def get_prompt(pdf_path, type : Optional[str], email_body : Optional[str] = ""):
     elif (type=="POP"):
         return pop_prompt(text, ocr_response, tes)
 
-# def get_bl_prompt(
-#         pdf_path, 
-#         email_subject: Optional[str] = "",
-#         tes = None):
-#     """
-#     This function will extract text from the PDF file using PDF Plumber or PyTesseract OCR.
-#     It will then call the appropriate BL prompt function based on the type of document (MBL or HBL).
-#     Then pass the extracted text to the respective prompt function, which will send it to the Mistral LLM using the Mistral API.
-#     """
-#     try:
-#         text = plumber_extract(pdf_path)
-#     except Exception as e:
-#         text = ""
-    
-#     tes = tessaract_ocr(pdf_path)
-#     # json_file_path = run_rapidocr.run_rapidocr_main(pdf_path, "output/", dpi=300)
-#     json_file_path = run_rapid4.run_ocr_pipeline(
-#         input_path=pdf_path,
-#         output_dir="output/",
-#         dpi=300,  
-#         annotate=False 
-#     )
-#     if not tes:
-#         # ocr_response = mistral_ocr(pdf_path)
-#         ocr_response = ""
-#         document_range = str(sanitize_json(extract(bl_splitting_prompt(text, email_subject, tes, ocr_response))))
-#     else:
-#         ocr_response = ""
-#         document_range = str(sanitize_json(extract(bl_splitting_prompt(text, email_subject, tes, ocr_response))))
-    
-#     logging.info(f"Document Range:\n{document_range}")
-#     with open(rf"{json_file_path}", "r") as f:
-#         rapidocr_json = f.read()
-#     return bl_prompt(text, document_range, rapidocr_json, ocr_response, tes, email_subject)
-
-# def get_bl_prompt(
-#         pdf_path, 
-#         email_subject: Optional[str] = "",
-#         tes = None):
-#     """
-#     Build and return the final BL prompt string without benchmarking/metrics.
-#     """
-#     try:
-#         text = plumber_extract(pdf_path)
-#     except Exception as e:
-#         text = ""
-    
-#     tes = tessaract_ocr(pdf_path)
-#     json_file_path = run_rapid4.run_ocr_pipeline(
-#         input_path=pdf_path,
-#         output_dir="output/",
-#         dpi=300,  
-#         annotate=False 
-#     )
-
-#     ocr_response = ""
-#     document_range = str(sanitize_json(extract(bl_splitting_prompt(text, email_subject, tes, ocr_response))))
-#     logging.info(f"Document Range:\n{document_range}")
-#     with open(rf"{json_file_path}", "r") as f:
-#         rapidocr_json = f.read()
-#     return bl_prompt(text, document_range, rapidocr_json, ocr_response, tes, email_subject)
-
 
 def get_bl_prompt_groq(
         pdf_path, 
@@ -312,89 +230,6 @@ def get_bl_prompt(
         rapidocr_json = f.read()
     return bl_prompt(text, document_range, rapidocr_json, ocr_response, tes, email_subject)
 
-def get_bl_prompt_gemini(
-        pdf_path, 
-        email_subject: Optional[str] = "",
-        tes=None):
-    try:
-        text = plumber_extract(pdf_path)
-    except Exception:
-        text = ""
-    
-    tes = tessaract_ocr(pdf_path)
-    json_file_path = run_rapid4.run_ocr_pipeline(
-        input_path=pdf_path,
-        output_dir="output/",
-        dpi=300,
-        annotate=False
-    )
-
-    ocr_response = ""
-    document_range = str(sanitize_json(extract_gemini(bl_splitting_prompt(text, email_subject, tes, ocr_response))))
-    
-    logging.info(f"Document Range:\n{document_range}")
-
-    with open(rf"{json_file_path}", "r") as f:
-        rapidocr_json = f.read()
-
-    return bl_prompt(text, document_range, rapidocr_json, ocr_response, tes, email_subject)
-
-
-def get_bl_prompt_cohere(
-        pdf_path, 
-        email_subject: Optional[str] = "",
-        tes=None):
-    try:
-        text = plumber_extract(pdf_path)
-    except Exception:
-        text = ""
-    
-    tes = tessaract_ocr(pdf_path)
-    json_file_path = run_rapid4.run_ocr_pipeline(
-        input_path=pdf_path,
-        output_dir="output/",
-        dpi=300,
-        annotate=False
-    )
-
-    ocr_response = ""
-    document_range = str(sanitize_json(extract_cohere_llm(bl_splitting_prompt(text, email_subject, tes, ocr_response))))
-    
-    logging.info(f"Document Range:\n{document_range}")
-
-    with open(rf"{json_file_path}", "r") as f:
-        rapidocr_json = f.read()
-
-    return bl_prompt(text, document_range, rapidocr_json, ocr_response, tes, email_subject)
-
-
-def get_bl_prompt_openai(
-        pdf_path, 
-        email_subject: Optional[str] = "",
-        tes=None):
-    try:
-        text = plumber_extract(pdf_path)
-    except Exception:
-        text = ""
-    
-    tes = tessaract_ocr(pdf_path)
-    json_file_path = run_rapid4.run_ocr_pipeline(
-        input_path=pdf_path,
-        output_dir="output/",
-        dpi=300,
-        annotate=False
-    )
-
-    ocr_response = ""
-    document_range = str(sanitize_json(extract_openai(bl_splitting_prompt(text, email_subject, tes, ocr_response))))
-    
-    logging.info(f"Document Range:\n{document_range}")
-
-    with open(rf"{json_file_path}", "r") as f:
-        rapidocr_json = f.read()
-
-    return bl_prompt(text, document_range, rapidocr_json, ocr_response, tes, email_subject)
-
 
   
 # get_rag_prompt function will extract text from the PDF file using plumber_extract and OCR methods.
@@ -417,22 +252,6 @@ def get_rag_prompt(pdf_path, type : Optional[str]):
     elif (type=="DO"):
         return rag_do_prompt(text,tes)
 
-# This function is for Proof of Payments (POP). It will extract text from the PDF file using PDF Plumber or PyTesseract OCR.
-def get_pop_prompt(pdf_path):
-    """
-    This function is for Proof of Payments (POP). It will extract text from the PDF file using PDF Plumber or PyTesseract OCR.
-    """
-
-    print(pdf_path)
-    if pdf_path.lower().endswith(".pdf"):
-        text = plumber_extract(pdf_path)
-        if(len(text)<100):
-            text = tessaract_ocr(pdf_path)
-    else:
-        text = tessaract_ocr(pdf_path)
-    
-    print(text)
-    return pop_prompt(text)
 
 
 def extract_groq(prompt):
@@ -468,118 +287,6 @@ def extract_groq(prompt):
     # chat_response = client.chat.complete(model=model, messages=messages)
 
     return chat_completion.choices[0].message.content
-
-def extract_cohere(file: UploadFile) -> str:
-    """
-    Extract text from an uploaded file.
-    Supports PDF and text files.
-    """
-    file_path = f"/tmp/{file.filename}"
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    if file.filename.lower().endswith(".pdf"):
-        text = extract_text_from_pdf(file_path)
-    else:
-        text = open(file_path, "r").read()
-
-    os.remove(file_path)
-    return text
-
-
-def extract_gemini(prompt: str) -> str:
-    """
-    Sends the BL prompt to Google Gemini API and returns the response.
-    """
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-    # You can choose gemini-1.5-pro or gemini-1.5-flash depending on speed/accuracy needs
-    model = genai.GenerativeModel("gemini-2.5-pro")
-
-    response = model.generate_content(prompt)
-
-    return response.text
-
-
-def extract_cohere_llm(prompt: str) -> str:
-    """
-    Sends the BL prompt to Cohere API and returns the response.
-    Uses cohere_utils.cohere_generate_text if available, otherwise calls Cohere directly.
-    """
-    # Prefer external helper if available
-    try:
-        if cohere_generate_text is not None:
-            return cohere_generate_text(prompt)
-    except Exception:
-        pass
-
-    api_key = os.getenv("COHERE_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="COHERE_API_KEY not set in environment")
-
-    client = cohere.Client(api_key)
-    try:
-        chat = client.chat(model="command-r-plus", message=prompt)
-        return chat.text
-    except Exception:
-        chat = client.chat(model="command", message=prompt)
-        return chat.text
-
-
-def extract_openai(prompt: str) -> str:
-    """
-    Sends the BL prompt to OpenAI API and returns the response.
-    """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set in environment")
-    
-    client = openai.OpenAI(api_key=api_key)
-    
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.1
-        )
-        return response.choicies[0].message.content
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
-
-# def extract(prompt):
-#     """
-#     This function selects the model (mistral-small-latest).
-#     Defines the messages for the chat, adds the prompt, initializes the Mistral client with the API key,
-#     Then sends the prompt to the Mistral API and returns the response.
-#     """
-#     model = "mistral-small-latest"
-
-#     # Define the messages for the chat
-#     messages = [{"role": "user", "content":
-#                 [{"type": "text", "text": prompt}]}]
-
-#     # Initialize the Mistral client (ensure you have API credentials set up)
-#     client = Mistral(api_key=api_key)
-
-#     # Get the chat response
-#     chat_response = client.chat.complete(model=model, messages=messages)
-
-#     return chat_response.choices[0].message.content
-
-# def extract(prompt):
-#     """
-#     Send the prompt to Mistral API and return only the response content.
-#     """
-#     model = "mistral-small-latest"
-#     messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-#     client = Mistral(api_key=api_key)
-#     chat_response = client.chat.complete(model=model, messages=messages)
-#     return chat_response.choices[0].message.content
 
 
 # New Mistral helpers for BL-new flow
@@ -641,7 +348,7 @@ class MPCIExcel(BaseModel):
 @app.post("/process-pdf")
 async def process_pdf_endpoint(data: PDFRequest):
     pdf_path = data.pdfPath
-
+    
     try:
         # Check if the pdf_path is an S3 URL or path pattern you accept
         if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
@@ -679,369 +386,49 @@ async def process_pdf_endpoint(data: PDFRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DO (Delivery Order) endpoint processes a PDF file for Delivery Orders.
-# It extracts the content and returns the result in JSON format.
-@app.post("/do")
-async def do_endpoint(data: PDFRequest):
-    pdf_path = data.pdfPath
-    email_body = data.emailBody
-
+@app.post("/process-pdf-upload")
+async def process_pdf_upload(file: UploadFile):
     try:
-        if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-            bucket_name, object_key = parse_s3_url(pdf_path)
-            file_name = "parsing_do.pdf"
-            s3_client.download_file(bucket_name, object_key, file_name)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file path provided")
+        if not file:
+            raise HTTPException(status_code=400, detail="No file uploaded")
+        # Some browsers send octet-stream; allow it to pass if it's a PDF upload
+        if file.content_type not in ("application/pdf", "application/octet-stream"):
+            raise HTTPException(status_code=400, detail="Please upload a PDF file")
 
-        result=extract(get_prompt(file_name,"DO"))
+        file_name = "parsing_invoice.pdf"
+        # Persist uploaded bytes to disk to reuse existing processors
+        contents = await file.read()
+        with open(file_name, "wb") as f:
+            f.write(contents)
+
+        # Process using Invoice RAG flow (same as /invoice-rag for invoices)
+        result = extract(get_rag_prompt(file_name, "INV"))
+
         if os.path.exists(file_name):
             os.remove(file_name)
 
         result_json = sanitize_json(result)
-        add_doc_type(result_json, "DO")
 
-        return result_json
+        if isinstance(result_json, dict):
+            add_doc_type(result_json, "INV")
+            return result_json
+        elif isinstance(result_json, list):
+            for item in result_json:
+                if isinstance(item, dict):
+                    add_doc_type(result_json, "INV")
+                else:
+                    raise ValueError("List item is not a dictionary")
+            return result_json
+        else:
+            raise ValueError("JSON is neither dict nor list")
 
     except Exception as e:
+        try:
+            if os.path.exists("parsing_invoice.pdf"):
+                os.remove("parsing_invoice.pdf")
+        except Exception:
+            pass
         raise HTTPException(status_code=500, detail=str(e))
-
-# This endpoint processes a PDF file for Proof of Payment (POP).
-# It extracts the content and returns the result in JSON format.
-@app.post("/ocr")
-async def ocr_endpoint(data: PDFOCRRequest):
-    pdf_path = data.pdfPath
-    ocr = data.ocr
-
-    try:
-        if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-            bucket_name, object_key = parse_s3_url(pdf_path)
-            file_name = "ocr_file.pdf"
-            s3_client.download_file(bucket_name, object_key, file_name)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-        if ocr == "MIS":
-            o_result = mistral_ocr(file_name)
-            result = ""
-            for page in o_result.pages:
-                result += f"Page {page.index + 1}:\n{page.markdown}\n{'-'*50}\n"
-            return {"text": result}
-
-        elif ocr == "TES":
-            return {"text": tessaract_ocr(file_name)}
-        else:
-            raise HTTPException(status_code=400, detail="Invalid OCR type provided")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# The main and crrent working endpoint for classifying documents and extracting information from them.
-# It detects the document type (INV or DO) and processes it accordingly.
-@app.post("/classify")
-async def classify_endpoint(data: PDFRequest):
-    """
-    This endpoint classifies the document type (INV or DO) based on the content of the
-    """
-    pdf_path = data.pdfPath
-    email_body = data.emailBody
-    doc_type = data.docType
-
-    logger.info(f"Received PDF path: {pdf_path}")
-    # logger.info(f"Received email body: {email_body}")
-    logger.info("Starting document classification and extraction...")
-    start_time = time.time()
-    logger.info(f"Start time: {start_time}")
-
-    try:
-        if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-            bucket_name, object_key = parse_s3_url(pdf_path)
-            file_name = "parsing_file.pdf"
-            s3_client.download_file(bucket_name, object_key, file_name)
-            doc_type = detect_document_type(file_name)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-        if doc_type == "INV":
-            result=extract(get_prompt(file_name,"INV"))
-            if os.path.exists(file_name):
-                os.remove(file_name)
-            result_json = sanitize_json(result)
-            result_json["docType"] = "INV"
-            return result_json
-
-        elif doc_type == "DO":
-            result=extract(get_prompt(file_name,"DO"))
-            if os.path.exists(file_name):
-                os.remove(file_name)
-            result_json = sanitize_json(result)
-            result_json["docType"] = "DO"
-            return result_json
-        
-        # elif doc_type == "POP":
-        #     result=extract(get_pop_prompt(file_name))
-        #     if os.path.exists(file_name):
-        #         os.remove(file_name)
-        #     result_json = sanitize_json(result)
-        #     result_json["docType"] = "POP"
-        #     return result_json
-
-        elif doc_type == "BL":
-            result = extract(get_prompt(file_name, "BL", email_body))
-            if os.path.exists(file_name):
-                os.remove(file_name)
-            result_json = sanitize_json(result)
-            result_json["docType"] = "BL"
-            return result_json
-        
-        else:
-            raise HTTPException(status_code=400, detail="Unknown document type")
-
-    except Exception as e:
-        end_time = time.time()
-        logger.info(f"Time taken: {end_time - start_time} seconds")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# @app.post("/bl")
-# async def bl_endpoint(data: BLRequest, request: Request):
-#     pdf_path = data.pdfPath
-#     email_subject = data.emailSubject
-#     source = data.source
-
-#     excel_template_path_url = r"s3://odex-warehouse-document-qc/manifest/TEMPLATES/MPCI Bulk Excel.xlsx"
-#     excel_file_name = "Excel_Template.xlsx"
-
-#     if source == "WEB_APP":
-#         # Get the MBL Number from file name of the PDF from the S3 link
-#         # Extract filename from S3 path
-#         filename = os.path.basename(pdf_path)
-#         # Remove .pdf extension
-#         filename_without_ext = os.path.splitext(filename)[0]
-#         # Extract MBL number (part after underscore)
-#         if '_' in filename_without_ext:
-#             MBL_NUMBER = filename_without_ext.split('_', 1)[1]
-#         else:
-#             # Fallback to full filename without extension if no underscore found
-#             MBL_NUMBER = filename_without_ext
-#         logging.info(f"MBL Number extracted from PDF file name from S3 Link is: {MBL_NUMBER}")
-
-#     try:
-#         logging.info("Starting BL Extraction Process...")
-#         raw_body = await request.body()
-#         print("RAW REQUEST BODY:\n", raw_body.decode())
-#         # data = BLRequest.model_validate_json(raw_body)
-
-#         # Getting File Name of the PDF from the PDF Path for Final Excel File Name.
-#         temp = os.path.basename(pdf_path)
-#         parsing_pdf_filename = os.path.splitext(temp)[0]
-
-#         # Getting PDF File from AWS S3 Bucket (streaming bytes instead of direct download).
-#         # Previous approach (kept for reference):
-#         logging.info("Downloading PDF from AWS S3 Bucket...")
-#         if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-#             bucket_name, object_key = parse_s3_url(pdf_path)
-#             file_name = "parsing_bl.pdf"
-#             s3_client.download_file(bucket_name, object_key, file_name)
-#         else:
-#             raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-#         # New approach: stream the object from S3 and persist to a temporary file for downstream processors.
-#         # logging.info("Streaming PDF bytes from AWS S3 Bucket...")
-#         # if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-#         #     bucket_name, object_key = parse_s3_url(pdf_path)
-#         #     s3_response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
-#         #     pdf_bytes = s3_response["Body"].read()
-#         #     # Write to a temporary file path expected by existing processing utilities
-#         #     tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-#         #     try:
-#         #         tmp_file.write(pdf_bytes)
-#         #         tmp_file.flush()
-#         #         file_name = tmp_file.name
-#         #     finally:
-#         #         tmp_file.close()
-#         # else:
-#         #     raise HTTPException(status_code=400, detail="Invalid file path provided")
-        
-#         # size_bytes = len(pdf_bytes)
-#         # sha256 = hashlib.sha256(pdf_bytes).hexdigest()
-#         # head_b64 = base64.b64encode(pdf_bytes[:64]).decode()
-
-#         # logging.info(f"Saved temp PDF: {file_name}")
-#         # logging.info(f"Size: {size_bytes} bytes, SHA256: {sha256}")
-#         # logging.info(f"First 64 bytes (base64): {head_b64}")
-#         # logging.info(f"Exists on disk: {os.path.exists(file_name)}")
-
-#         # If source is WEB_APP, include MBL number as context in email_subject
-#         if source == "WEB_APP":
-#             # Include MBL number as context in the email subject for the prompt
-#             enhanced_email_subject = f"{email_subject} | MBL_NUMBER: {MBL_NUMBER}"
-#             result = extract(get_bl_prompt(file_name, enhanced_email_subject))
-#         else:
-#             result = extract(get_bl_prompt(file_name, email_subject))
-
-
-#         # Calling the parsing function to extract data from the BL PDF.
-#         result=extract(get_bl_prompt(file_name, email_subject))
-
-#         # As you noted, use the intermediate JSON for comparison
-#         result_json = sanitize_json(result)
-
-
-#         if os.path.exists(file_name):
-#             os.remove(file_name)
-
-#         # result_json = sanitize_json(result)
-#         dict_json = json.dumps(result_json, indent=2)
-#         final_json = mapper(dict_json, parsing_pdf_filename)
-#         try:
-#             result = sanitize_json(final_json)
-#         except Exception as e:
-#             result = final_json
-
-#         # Attempt to remove the 'output' folder before completing
-#         try:
-#             shutil.rmtree("output", ignore_errors=True)
-#         except Exception as e:
-#             logging.warning(f"Could not remove 'output' directory: {e}")
-#         logging.info("BL Extraction Process Completed.")
-#         return result
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-# @app.post("/bl")
-# async def bl_endpoint(data: BLRequest, request: Request):
-#     pdf_path = data.pdfPath
-#     email_subject = data.emailSubject
-#     source = data.source
-
-#     excel_template_path_url = r"s3://odex-warehouse-document-qc/manifest/TEMPLATES/MPCI Bulk Excel.xlsx"
-#     excel_file_name = "Excel_Template.xlsx"
-#     if source == "WEB_APP":
-#         # Get the MBL Number from file name of the PDF from the S3 link
-#         # Extract filename from S3 path
-#         filename = os.path.basename(pdf_path)
-#         # Remove .pdf extension
-#         filename_without_ext = os.path.splitext(filename)[0]
-#         # Extract MBL number (part after underscore)
-#         if '_' in filename_without_ext:
-#             MBL_NUMBER = filename_without_ext.split('_', 1)[1]
-#         else:
-#             # Fallback to full filename without extension if no underscore found
-#             MBL_NUMBER = filename_without_ext
-#         logging.info(f"MBL Number extracted from PDF file name from S3 Link is: {MBL_NUMBER}")
-
-
-#     try:
-#         # --- MODIFICATION: Start timer at the beginning of the process ---
-#         start_time = time.time()
-        
-#         logging.info("Starting BL Extraction Process...")
-#         raw_body = await request.body()
-#         print("RAW REQUEST BODY:\n", raw_body.decode())
-
-#         # Getting File Name of the PDF from the PDF Path for Final Excel File Name.
-#         temp = os.path.basename(pdf_path)
-#         parsing_pdf_filename = os.path.splitext(temp)[0]
-
-#         # Getting PDF File from AWS S3 Bucket
-#         logging.info("Downloading PDF from AWS S3 Bucket...")
-#         if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-#             bucket_name, object_key = parse_s3_url(pdf_path)
-#             file_name = "parsing_bl.pdf"
-#             s3_client.download_file(bucket_name, object_key, file_name)
-#         else:
-#             raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-#         # Build final prompt and extract without benchmarking/metrics
-#         if source == "WEB_APP":
-#             enhanced_email_subject = f"{email_subject} | MBL_NUMBER: {MBL_NUMBER}"
-#             # logging.info("Enhanced Email Subject:", enhanced_email_subject)
-#             result_json = extract(get_bl_prompt(file_name, enhanced_email_subject))
-#         else:
-#             result_json = extract(get_bl_prompt(file_name, email_subject))
-        
-#         # if os.path.exists(file_name):
-#         #     os.remove(file_name)
-
-#         # result_json = sanitize_json(result)
-#         # dict_json = json.dumps(result_json, indent=2)
-#         # final_json = mapper(dict_json, parsing_pdf_filename)
-#         # try:
-#         #     result = sanitize_json(final_json)
-#         # except Exception as e:
-#         #     result = final_json
-        
-#         # # Attempt to remove the 'output' folder before completing
-#         # try:
-#         #     shutil.rmtree("output", ignore_errors=True)
-#         # except Exception as e:
-#         #     logging.warning(f"Could not remove 'output' directory: {e}")
-            
-#         # logging.info("BL Extraction Process Completed.")
-#         # return result
-
-#         if os.path.exists(file_name):
-#             os.remove(file_name)
-
-#         result_json = sanitize_json(result)
-#         dict_json = json.dumps(result_json, indent=2)
-#         final_json = mapper(dict_json, parsing_pdf_filename)
-#         try:
-#             result = sanitize_json(final_json)
-#         except Exception as e:
-#             result = final_json
-#         # Attempt to remove the 'output' folder before completing
-#         try:
-#             shutil.rmtree("output", ignore_errors=True)
-#         except Exception as e:
-#             logging.warning(f"Could not remove 'output' directory: {e}")
-#         logging.info("BL Extraction Process Completed.")
-#         return result
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-def compare_extractions(ground_truth: dict, extracted: dict):
-    """
-    Compares the extracted JSON with the ground truth JSON and returns precision, recall, and f1-score.
-    """
-    # Flatten both dictionaries to a single level for easier comparison
-    gt_flat = pd.json_normalize(ground_truth, sep='_').to_dict(orient='records')[0]
-    ext_flat = pd.json_normalize(extracted, sep='_').to_dict(orient='records')[0]
-
-    # Get the sets of keys
-    gt_keys = set(gt_flat.keys())
-    ext_keys = set(ext_flat.keys())
-
-    # Identify keys that were correctly extracted with the correct value
-    correctly_extracted_keys = {k for k in ext_keys if k in gt_keys and str(gt_flat[k]).strip() == str(ext_flat[k]).strip()}
-
-    # True Positives (TP): Correctly identified and extracted
-    tp = len(correctly_extracted_keys)
-
-    # False Positives (FP): Extracted but incorrect (wrong key or wrong value)
-    fp = len(ext_keys) - tp
-
-    # False Negatives (FN): In ground truth but not extracted
-    fn = len(gt_keys) - tp
-
-    # Calculate metrics
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    error_rate = 1 - f1_score # A simple way to represent error
-
-    return {
-        "precision": precision,
-        "recall": recall,
-        "f1_score": f1_score,
-        "error_rate": error_rate,
-        "true_positives": tp,
-        "false_positives": fp,
-        "false_negatives": fn
-    }
 
 @app.post("/bl-groq")
 async def bl_endpoint(data: BLRequest, request: Request):
@@ -1226,298 +613,6 @@ async def bl_new_endpoint(data: BLRequest, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/bl-gemini")
-async def bl_gemini_endpoint(data: BLRequest, request: Request):
-    pdf_path = data.pdfPath
-    email_subject = data.emailSubject
-    ground_truth = data.groundTruth
-
-    try:
-        logging.info("Starting BL Extraction Process (Gemini)...")
-        t0 = time.time()
-        raw_body = await request.body()
-        print("RAW REQUEST BODY:\n", raw_body.decode())
-
-        temp = os.path.basename(pdf_path)
-        parsing_pdf_filename = os.path.splitext(temp)[0]
-
-        logging.info("Downloading PDF from AWS S3 Bucket...")
-        if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-            bucket_name, object_key = parse_s3_url(pdf_path)
-            file_name = "parsing_bl.pdf"
-            s3_client.download_file(bucket_name, object_key, file_name)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-        # Count pages for per-page latency
-        page_count = count_pdf_pages(file_name)
-
-        # Call Gemini
-        t1 = time.time()
-        result = extract_gemini(get_bl_prompt_gemini(file_name, email_subject))
-        t2 = time.time()
-
-        if os.path.exists(file_name):
-            os.remove(file_name)
-
-        result_json = sanitize_json(result)
-        dict_json = json.dumps(result_json, indent=2)
-        final_json = mapper(dict_json, parsing_pdf_filename)
-
-        try:
-            result = sanitize_json(final_json)
-        except Exception:
-            result = final_json
-
-        shutil.rmtree("output", ignore_errors=True)
-        logging.info("BL Extraction Process Completed (Gemini).")
-
-        # Metrics
-        wall_ms = int(round((time.time() - t0) * 1000))
-        model_ms = int(round((t2 - t1) * 1000))
-        per_page_ms = (wall_ms // page_count) if page_count else None
-
-        extraction_metrics = compute_extraction_metrics(result if isinstance(result, dict) else {}, ground_truth)
-        schema_metrics = compute_schema_adherence(result if isinstance(result, dict) else {}, ground_truth)
-        error_rate_pct = compute_error_rate(schema_metrics)
-
-        response_payload = {
-            "data": result,
-            "metrics": {
-                "extractionAccuracyPct": extraction_metrics.get("extractionAccuracyPct"),
-                "fieldLevel": extraction_metrics.get("fieldLevel"),
-                "latencyMs": {
-                    "totalRequest": wall_ms,
-                    "modelCall": model_ms,
-                    "perPage": per_page_ms,
-                    "pageCount": page_count
-                },
-                "errorRatePct": error_rate_pct,
-                "schemaAdherence": schema_metrics,
-            }
-        }
-
-        return response_payload
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/bl-cohere")
-async def bl_cohere_endpoint(data: BLRequest, request: Request):
-    pdf_path = data.pdfPath
-    email_subject = data.emailSubject
-    ground_truth = data.groundTruth
-
-    try:
-        logging.info("Starting BL Extraction Process (Cohere)...")
-        t0 = time.time()
-        raw_body = await request.body()
-        print("RAW REQUEST BODY:\n", raw_body.decode())
-
-        temp = os.path.basename(pdf_path)
-        parsing_pdf_filename = os.path.splitext(temp)[0]
-
-        logging.info("Downloading PDF from AWS S3 Bucket...")
-        if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-            bucket_name, object_key = parse_s3_url(pdf_path)
-            file_name = "parsing_bl.pdf"
-            s3_client.download_file(bucket_name, object_key, file_name)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-        page_count = count_pdf_pages(file_name)
-
-        # Call Cohere
-        t1 = time.time()
-        result = extract_cohere_llm(get_bl_prompt_cohere(file_name, email_subject))
-        t2 = time.time()
-
-        if os.path.exists(file_name):
-            os.remove(file_name)
-
-        result_json = sanitize_json(result)
-        dict_json = json.dumps(result_json, indent=2)
-        final_json = mapper(dict_json, parsing_pdf_filename)
-
-        try:
-            result = sanitize_json(final_json)
-        except Exception:
-            result = final_json
-
-        shutil.rmtree("output", ignore_errors=True)
-        logging.info("BL Extraction Process Completed (Cohere).")
-
-        wall_ms = int(round((time.time() - t0) * 1000))
-        model_ms = int(round((t2 - t1) * 1000))
-        per_page_ms = (wall_ms // page_count) if page_count else None
-
-        extraction_metrics = compute_extraction_metrics(result if isinstance(result, dict) else {}, ground_truth)
-        schema_metrics = compute_schema_adherence(result if isinstance(result, dict) else {}, ground_truth)
-        error_rate_pct = compute_error_rate(schema_metrics)
-
-        response_payload = {
-            "data": result,
-            "metrics": {
-                "extractionAccuracyPct": extraction_metrics.get("extractionAccuracyPct"),
-                "fieldLevel": extraction_metrics.get("fieldLevel"),
-                "latencyMs": {
-                    "totalRequest": wall_ms,
-                    "modelCall": model_ms,
-                    "perPage": per_page_ms,
-                    "pageCount": page_count
-                },
-                "errorRatePct": error_rate_pct,
-                "schemaAdherence": schema_metrics,
-            }
-        }
-
-        return response_payload
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/bl-openai")
-async def bl_openai_endpoint(data: BLRequest, request: Request):
-    pdf_path = data.pdfPath
-    email_subject = data.emailSubject
-    ground_truth = data.groundTruth
-
-    try:
-        logging.info("Starting BL Extraction Process (OpenAI)...")
-        t0 = time.time()
-        raw_body = await request.body()
-        print("RAW REQUEST BODY:\n", raw_body.decode())
-
-        temp = os.path.basename(pdf_path)
-        parsing_pdf_filename = os.path.splitext(temp)[0]
-
-        logging.info("Downloading PDF from AWS S3 Bucket...")
-        if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-            bucket_name, object_key = parse_s3_url(pdf_path)
-            file_name = "parsing_bl.pdf"
-            s3_client.download_file(bucket_name, object_key, file_name)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-        page_count = count_pdf_pages(file_name)
-
-        # Call OpenAI
-        t1 = time.time()
-        result = extract_openai(get_bl_prompt_openai(file_name, email_subject))
-        t2 = time.time()
-
-        if os.path.exists(file_name):
-            os.remove(file_name)
-
-        result_json = sanitize_json(result)
-        dict_json = json.dumps(result_json, indent=2)
-        final_json = mapper(dict_json, parsing_pdf_filename)
-
-        try:
-            result = sanitize_json(final_json)
-        except Exception:
-            result = final_json
-
-        shutil.rmtree("output", ignore_errors=True)
-        logging.info("BL Extraction Process Completed (OpenAI).")
-
-        wall_ms = int(round((time.time() - t0) * 1000))
-        model_ms = int(round((t2 - t1) * 1000))
-        per_page_ms = (wall_ms // page_count) if page_count else None
-
-        extraction_metrics = compute_extraction_metrics(result if isinstance(result, dict) else {}, ground_truth)
-        schema_metrics = compute_schema_adherence(result if isinstance(result, dict) else {}, ground_truth)
-        error_rate_pct = compute_error_rate(schema_metrics)
-
-        response_payload = {
-            "data": result,
-            "metrics": {
-                "extractionAccuracyPct": extraction_metrics.get("extractionAccuracyPct"),
-                "fieldLevel": extraction_metrics.get("fieldLevel"),
-                "latencyMs": {
-                    "totalRequest": wall_ms,
-                    "modelCall": model_ms,
-                    "perPage": per_page_ms,
-                    "pageCount": page_count
-                },
-                "errorRatePct": error_rate_pct,
-                "schemaAdherence": schema_metrics,
-            }
-        }
-
-        return response_payload
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/mpci-excel")
-async def mpci_excel_endpoint(data: MPCIExcel, request: Request):
-    input_json_data = data.inputJson
-    Excel_Final_file_name = data.xlsxName
-    
-    # Add .xlsx extension if not present
-    if not Excel_Final_file_name.endswith('.xlsx'):
-        Excel_Final_file_name += '.xlsx'
-
-    excel_template_path_url = r"s3://odex-warehouse-document-qc/manifest/TEMPLATES/MPCI Bulk Excel.xlsx"
-    excel_file_name = "Excel_Template.xlsx"
-
-    try:
-        logging.info("Starting Reverse Transformation & Excel Generation Process...")
-        raw_body = await request.body()
-        print("RAW REQUEST BODY:\n", raw_body.decode())
-        # data = BLRequest.model_validate_json(raw_body)
-
-        # Handle double-escaped JSON string
-        try:
-            # First parse: convert escaped string to JSON string
-            parsed_json_string = json.loads(input_json_data)
-            # Second parse: convert JSON string to dict
-            parsed_json_dict = json.loads(parsed_json_string)
-            transformed_output = sanitize_json_dict(reverse_transform_json(parsed_json_dict))
-        except json.JSONDecodeError:
-            # If double parsing fails, try single parsing (for backward compatibility)
-            transformed_output = sanitize_json_dict(reverse_transform_json(input_json_data))
-
-        file_path = os.path.join(os.getcwd(), "ODeX_json.json")
-        temp_json = sanitize_json(transformed_output) # String
-
-        with open(file_path, "w", encoding="utf-8-sig") as f:
-            json.dump(temp_json, f, indent=2, ensure_ascii=False)
-        print(f"✅ JSON written to {file_path}")
-
-        # --- EXCEL GENERATION ---
-        # Download the template
-        excel_template_file_path = excel_template_downlaoder()
-        
-        # Call the modified function which returns the output path AND the data with row numbers
-        output_file_path, data_with_rows = process_json_to_excel(
-            file_path, 
-            r"Excel_Template.xlsx", 
-            Excel_Final_file_name
-        )
-        if not output_file_path:
-             raise Exception("Failed to generate the Excel file.")
-        
-        excel_s3_link = upload_to_s3(Excel_Final_file_name, output_file_path)
-        logger.info(f"Excel file uploaded to S3: {excel_s3_link}")
-
-        if os.path.exists(Excel_Final_file_name):
-            os.remove(Excel_Final_file_name)
-        if os.path.exists(excel_template_file_path):
-            os.remove(excel_template_file_path)
-        if os.path.exists(r"ODeX_json.json"):
-            os.remove(r"ODeX_json.json")
-        result_json = {"xlsxPath": f"{excel_s3_link}"}
-        return result_json
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-
 @app.post("/pop")
 async def pop_endpoint(data: PDFRequest):
     pdf_path = data.pdfPath
@@ -1582,46 +677,6 @@ async def invoice_rag_endpoint(data: PDFRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/do-rag")
-async def do_rag_endpoint(data: PDFRequest):
-    pdf_path = data.pdfPath
-    try:
-        # Check if the pdf_path is an S3 URL or path pattern you accept
-        if pdf_path.startswith(bucket_name_1) or "/" in pdf_path:
-            bucket_name, object_key = parse_s3_url(pdf_path)
-
-            # Get the PDF file from S3
-            file_name = "parsing_do.pdf"
-            local_file_path = os.path.join(os.getcwd(), file_name)
-            s3_client.download_file(bucket_name, object_key, local_file_path)
-
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file path provided")
-
-        # Process the PDF and return the result
-        result=extract(get_rag_prompt(file_name,"DO"))
-        
-        if os.path.exists(file_name):
-            os.remove(file_name)
-
-        result_json=extract_so_do_entries(result)
-
-        if isinstance(result_json, dict):
-            add_doc_type(result_json, "DO")
-            return result_json
-        elif isinstance(result_json, list):
-            for item in result_json:
-                if isinstance(item, dict):
-                    add_doc_type(result_json, "DO")
-                else:
-                    raise ValueError("List item is not a dictionary")
-
-            return JSONResponse(content=result_json)
-        else:
-            raise ValueError("JSON is neither dict nor list")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     
 
 @app.post("/classify-rag")
