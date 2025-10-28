@@ -20,7 +20,7 @@ st.title("🧾 AI Invoice Processing System")
 st.markdown('<span style="color:#ef4444; font-weight:bold; font-size:18px;">Black & Red Theme | Streamlit</span>', unsafe_allow_html=True)
 st.write("Upload an invoice PDF to extract key fields using the AI backend.")
 
-backend_url = "http://localhost:8000/process-pdf-upload"
+backend_url = "http://localhost:8000/process-pdf-upload-redis"
 
 uploaded_file = st.file_uploader("Drop PDF here or click to browse", type="pdf", label_visibility="visible")
 
