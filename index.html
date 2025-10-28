@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered invoice processing with advanced document analysis">
+    <title>AI Invoice Processing System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Notification Container -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <h1 class="header-title">AI Invoice Processing System</h1>
+            <div class="header-accent"></div>
+            <div class="live-indicator">
+                <span class="live-dot"></span>
+                <span class="live-text">LIVE</span>
+            </div>
+        </header>
+
+        <!-- Upload Card -->
+        <div class="card upload-card">
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="fileInput" accept=".pdf,application/pdf" hidden>
+                <svg class="upload-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <p class="upload-text">Drop PDF here or click to browse</p>
+                <p class="upload-subtext">Maximum file size: 10MB</p>
+            </div>
+            
+            <div id="fileInfo" class="file-info hidden">
+                <div class="file-details">
+                    <svg class="file-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <div class="file-text">
+                        <span id="fileName" class="file-name"></span>
+                        <span id="fileSize" class="file-size"></span>
+                    </div>
+                </div>
+                <button id="removeFile" class="remove-btn" aria-label="Remove file">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <button id="processBtn" class="btn btn-primary" disabled>
+                <span class="btn-text">Upload &amp; Process</span>
+                <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Processing Animation Overlay -->
+        <div id="processingOverlay" class="processing-overlay hidden">
+            <div class="processing-container">
+                <!-- Central Spinner -->
+                <div class="central-spinner">
+                    <svg class="spinner-ring" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="90" fill="none" stroke-width="8"/>
+                    </svg>
+                    <div class="spinner-percentage" id="spinnerPercentage">0%</div>
+                </div>
+                
+                <!-- Document with Laser Scan -->
+                <div class="document-scan">
+                    <svg class="document-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="10" y1="13" x2="18" y2="13"></line>
+                        <line x1="10" y1="17" x2="18" y2="17"></line>
+                    </svg>
+                    <div class="laser-line"></div>
+                </div>
+                
+                <!-- Particles -->
+                <div class="particles" id="particles"></div>
+                
+                <!-- Processing Text -->
+                <div class="processing-text">
+                    <span id="processingStage">Uploading document</span>
+                    <span class="ellipsis"></span>
+                </div>
+                
+                <!-- Stage Indicators -->
+                <div class="stage-indicators">
+                    <div class="stage-dot" data-stage="1"></div>
+                    <div class="stage-dot" data-stage="2"></div>
+                    <div class="stage-dot" data-stage="3"></div>
+                    <div class="stage-dot" data-stage="4"></div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Card -->
+        <div id="resultsCard" class="card results-card hidden">
+            <div class="card-header">
+                <div class="results-header-left">
+                    <h2>Extraction Results</h2>
+                    <span id="processingTime" class="badge"></span>
+                    <span id="fieldCount" class="badge"></span>
+                </div>
+                <div class="results-actions">
+                    <button id="copyBtn" class="action-btn" title="Copy to clipboard">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy
+                    </button>
+                    <button id="downloadBtn" class="action-btn" title="Download JSON">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download
+                    </button>
+                    <button id="resetBtn" class="action-btn" title="Process another">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                        </svg>
+                        Reset
+                    </button>
+                </div>
+            </div>
+            <div id="jsonViewer" class="json-viewer"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 AI Invoice Processing System • v1.0.0</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
